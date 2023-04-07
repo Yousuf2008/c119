@@ -1,0 +1,155 @@
+# Text Data Preprocessing Lib
+import nltk
+nltk.download('punkt')
+nltk.download('wordnet')
+
+# to stem words
+from nltk.stem import PorterStemmer
+
+# create an instance of class PorterStemmer
+stemmer = PorterStemmer()
+
+# importing json lib
+import json
+import pickle
+import numpy as np
+
+words=[] #list of unique roots words in the data
+classes = [] #list of unique tags in the data
+pattern_word_tags_list = [] #list of the pair of (['words', 'of', 'the', 'sentence'], 'tags')
+
+# words to be ignored while creating Dataset
+ignore_words = ['?', '!',',','.', "'s", "'m"]
+
+# open the JSON file, load data from it.
+train_data_file = open('intents.json')
+data = json.load(train_data_file)
+train_data_file.close()
+
+# creating function to stem words
+def get_stem_words(words, ignore_words):
+    stem_words = []
+    for word in words:
+        if word not in words:
+            w = stemmer.stem(word.lower())
+            stem_words.append(w)       
+
+    return stem_words
+
+
+'''
+List of sorted stem words for our dataset : 
+
+['all', 'ani', 'anyon', 'are', 'awesom', 'be', 'best', 'bluetooth', 'bye', 'camera', 'can', 'chat', 
+'cool', 'could', 'digit', 'do', 'for', 'game', 'goodby', 'have', 'headphon', 'hello', 'help', 'hey', 
+'hi', 'hola', 'how', 'is', 'later', 'latest', 'me', 'most', 'next', 'nice', 'phone', 'pleas', 'popular', 
+'product', 'provid', 'see', 'sell', 'show', 'smartphon', 'tell', 'thank', 'that', 'the', 'there', 
+'till', 'time', 'to', 'trend', 'video', 'what', 'which', 'you', 'your']
+
+'''
+
+
+# creating a function to make corpus
+def create_bot_corpus(words, classes, pattern_word_tags_list, ignore_words):
+
+    for intent in data['intents']:
+
+        # Add all patterns and tags to a list
+        for pattern in intent['patterns']:  
+
+            # tokenize the pattern          
+            pattern_words = nltk.word_tokenize(pattern)
+
+            # add the tokenized words to the words list
+        for pattern in intent['patterns']:            
+            pattern_word = nltk.word_tokenize(pattern)            
+            words.extend(pattern_word)                      
+            pattern_word_tags_list.append((pattern_word, intent['tag']))        
+            # add the 'tokenized word list' along with the 'tag' to pattern_word_tags_list
+        if intent['tag'] not in classes:
+            classes.append(intent['tag'])
+            stem_words = get_stem_words(words, ignore_words)
+
+            
+            
+        # Add all tags to the classes list
+        if intent['tag'] not in classes:
+            classes.append(intent['tag'])
+
+            
+    stem_words = get_stem_words(words, ignore_words) 
+
+    # Remove duplicate words from stem_words
+def create_bot_corpus(stem_words, classes):
+
+    stem_words = sorted(list(set(stem_words)))
+    classes = sorted(list(set(classes)))
+
+    pickle.dump(stem_words, open('words.pkl','wb'))
+    pickle.dump(classes, open('classes.pkl','wb'))
+
+    return stem_words, classes, pattern_word_tags_list
+
+print('stem_words list : ' , stem_words)
+
+
+
+
+# Training Dataset: 
+# Input Text----> as Bag of Words 
+# Tags-----------> as Label
+
+def bag_of_words_encoding(stem_words, pattern_word_tags_list):
+    
+    training_data = []
+number_of_tags = len(classes)
+labels = [0] * number_of_tags
+for word_tags in pattern_word_tags_list:
+     bag_of_words = []
+     pattern_word = word_tags[0]
+     for word in pattern_word:
+          index = pattern_word.index(word)
+          word = stemmer.stem(word.lower())
+          pattern_word[index] = word
+     for word in stem_words:
+          if word in pattern_word:
+               bag_of_words.append(1)
+          else:
+               bag_of_words.append  (0)
+     print(bag_of_words)
+    
+     labels_encoding = list(labels)
+     tag = word_tags[1]
+     tag_index = classes.index(tag)
+     labels_encoding[tag_index] = 1
+     training_data.append([bag_of_words, labels_encoding])
+print(training_data[0])
+
+def preprocces_train_data(training_data):
+     training_data = np.array(training_data, dtype = object)
+     training_x = list(training_data[:,0])
+     training_y = list(training_data[:,1])
+     print(training_x[0])
+     print(training_y[0])
+     return training_x, training_y
+training_x, training_y = preprocces_train_data(training_data)
+
+def preprocess_train_data():
+  
+    stem_words, tag_classes, word_tags_list = create_bot_corpus(words, classes, pattern_word_tags_list, ignore_words)
+    
+    # Convert Stem words and Classes to Python pickel file format
+    
+
+    train_x = bag_of_words_encoding(stem_words, word_tags_list)
+    train_y = class_label_encoding(tag_classes, word_tags_list)
+    
+    return train_x, train_y
+
+bow_data  , label_data = preprocess_train_data()
+
+# after completing the code, remove comment from print statements
+# print("first BOW encoding: " , bow_data[0])
+# print("first Label encoding: " , label_data[0])
+
+
